@@ -7,6 +7,7 @@ use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use walkdir::WalkDir;
+use glob::glob;
 
 /// Synchronizes the local library dependencies.
 pub fn sync_libs(lib_path: &PathBuf) {
@@ -85,6 +86,34 @@ pub fn build_lib(lib_path: PathBuf, shared: bool) -> PathBuf {
             assert!(status.success(), "Failed to convert the solution");
         }
     };
+
+    for entry in glob(&format!("{}/**/*.vcxproj", lib_path.to_string_lossy())).unwrap() {
+        let entry_path = entry.unwrap();
+
+        let mut proj_file_content = String::new();
+
+        {
+            let mut proj_file = File::open(&entry_path).unwrap();
+            proj_file.read_to_string(&mut proj_file_content).unwrap();
+        }
+
+        let patched_content = proj_file_content.replace(
+            "<CharacterSet>Unicode</CharacterSet>",
+            "<CharacterSet>Unicode</CharacterSet>\n<PlatformToolset>v141_xp</PlatformToolset>"
+        ).replace(
+            "<RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>",
+            "<RuntimeLibrary>MultiThreaded</RuntimeLibrary>"
+        ).replace(
+            "</PreprocessorDefinitions>",
+            ";WINVER=0x501</PreprocessorDefinitions>",
+        );
+
+
+        {
+            let mut proj_file = File::create(&entry_path).unwrap();
+            proj_file.write_all(patched_content.as_bytes()).unwrap();
+        }
+    }
 
     let target = env::var("TARGET").unwrap();
 
