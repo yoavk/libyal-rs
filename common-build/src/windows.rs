@@ -11,6 +11,27 @@ use glob::glob;
 
 /// Synchronizes the local library dependencies.
 pub fn sync_libs(lib_path: &PathBuf) {
+    let synclibs_path = lib_path.join("synclibs.ps1");
+
+    /// Patch synclibs.ps1 to checkout dependencies at pinned date
+    let mut synclibs_file_content = String::new();
+    {
+        let mut synclibs_file = File::open(&synclibs_path).unwrap();
+        synclibs_file.read_to_string(&mut synclibs_file_content).unwrap();
+    }
+
+    let patched_content = synclibs_file_content.replace(
+        r#"$Output = Invoke-Expression -Command "${Git} fetch --quiet --all --tags --prune 2>&1""#,
+        r#"$Output = Invoke-Expression -Command "${Git} fetch --quiet --all --tags --prune 2>&1"
+            $LatestCommit = Invoke-Expression -Command "${Git} rev-list -n1 --before=2020-05-01 master 2>&1"
+            $Output = Invoke-Expression -Command "${Git} checkout --quiet ${LatestCommit} 2>&1""#
+    );
+
+    {
+        let mut synclibs_file = File::create(&synclibs_path).unwrap();
+        synclibs_file.write_all(patched_content.as_bytes()).unwrap();
+    }
+
     let status = Command::new("powershell")
         .arg("-NoProfile")
         .arg("-ExecutionPolicy")
