@@ -23,7 +23,7 @@ pub fn sync_libs(lib_path: &PathBuf) {
     let patched_content = synclibs_file_content.replace(
         r#"$Output = Invoke-Expression -Command "${Git} fetch --quiet --all --tags --prune 2>&1""#,
         r#"$Output = Invoke-Expression -Command "${Git} fetch --quiet --all --tags --prune 2>&1"
-            $LatestCommit = Invoke-Expression -Command "${Git} rev-list -n1 --before=2020-05-01 master 2>&1"
+            $LatestCommit = Invoke-Expression -Command "${Git} rev-list -n1 --before=2019-12-01 master 2>&1"
             $Output = Invoke-Expression -Command "${Git} checkout --quiet ${LatestCommit} 2>&1""#
     ).replace(
         r#"$LatestTag = Invoke-Expression -Command "${Git} describe --tags --abbrev=0 2>&1""#,
